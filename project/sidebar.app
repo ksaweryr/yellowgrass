@@ -36,6 +36,9 @@ section project toolbar
       p.requestJoin();
       message("Project membership requested, awaiting project member approval...");
     }
+    action exportProject(p : Project) {
+      p.bitbucketExport().download();
+    }
     
     projectButton(project)
     
@@ -52,6 +55,7 @@ section project toolbar
       submitlink followProject(project)      [submit attributes, title="Follow Project"] { iStarEmpty  }  
       submitlink unfollowProject(project)    [submit attributes, title="Unfollow Project"] { iStar } 
       submitlink requestJoinProject(project) [submit attributes, title="Request Project Membership"] { iUser }     
+      downloadlink exportProject(project)    [submit attributes, title="Export Project in the BitBucket format"] { iExport }
     }
     searchBoxInToolbar(project, "")
   }

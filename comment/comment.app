@@ -22,6 +22,20 @@ section data model
 	  }
   }
 
+section bitbucket
+	extend entity Comment {
+		function bitbucketComment(issue: Issue): JSONObject {
+			var comment := JSONObject();
+			comment.put("content", text);
+			comment.put("created_on", moment.format("yyyy-MM-dd'T'HH:mmZ"));
+			comment.put("id", (random() * 1e9).floor());
+			comment.put("issue", issue.number);
+			comment.put("updated_on", null as String);
+			comment.put("user", bitbucketUser(issue.reporter.name));
+			return comment;
+		}
+	}
+
 section operations
 
   function checkNewCommentObjects(json : JSONArray) : List<Comment> {

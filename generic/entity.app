@@ -23,3 +23,9 @@ module generic/entity
     if(e is a Issue) { byline(e as Issue) }   
   } 
   
+  function bitbucketUser(displayName: String): JSONObject {
+    var user := JSONObject();
+    user.put("display_name", displayName);
+    user.put("account_id", "<ID:~displayName>");
+    return user;
+  }

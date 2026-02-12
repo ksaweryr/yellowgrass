@@ -1,5 +1,9 @@
 module project/project-model
 
+native class org.yellowgrass.utils.ProjectExporter as ProjectExporter {
+  static createExportFile(Project, JSONObject, [AttachmentInfo]): File
+}
+
 section data model
 
   entity Project {
@@ -14,6 +18,8 @@ section data model
     email            :: Email
     notifications : Bool
     key              :: String    
+    exportFile       :: File
+    exportCreationTime :: DateTime
     extend function setName(x: String) {
       key := x.toLowerCase();
     }
@@ -22,7 +28,11 @@ section data model
       if(key == null || key == "") { key := name.toLowerCase(); }
       return key; 
     }
-    
+
+    extend function Project() {
+      exportCreationTime := now();
+    }
+
     search mapping{
     	name using none //index untokenized
     }
@@ -187,6 +197,68 @@ section queries
       return url.concat();
     }
   
+  }
+
+section bitbucket
+
+  extend entity Project {
+    function bitbucketExport(): File {
+      var dbObject := JSONObject();
+
+      dbObject.put("meta", Project.bitbucketMeta());
+
+      var versions := JSONArray();
+      dbObject.put("versions", versions);
+
+      var issues := JSONArray();
+      var comments := JSONArray();
+      var attachmentInfos := List<AttachmentInfo>();
+      for (i: Issue in this.issues) {
+        issues.put(i.bitbucketIssue());
+        for (c: JSONObject in i.bitbucketComments()) {
+          comments.put(c);
+        }
+        attachmentInfos.addAll(i.bitbucketAttachments());
+      }
+      dbObject.put("issues", issues);
+      dbObject.put("comments", comments);
+
+      var attachments := JSONArray();
+      for (ai: AttachmentInfo in attachmentInfos) {
+        attachments.put(ai.getMeta());
+      }
+      dbObject.put("attachments", attachments);
+
+      dbObject.put("milestones", bitbucketMilestones());
+
+      dbObject.put("logs", JSONArray());
+      dbObject.put("components", JSONArray());
+
+      exportFile := ProjectExporter.createExportFile(this, dbObject, attachmentInfos);
+      return exportFile;
+    }
+
+    function bitbucketMilestones(): JSONArray {
+      var res := JSONArray();
+
+      for (t: Tag in releases(this)) {
+        var milestoneObject := JSONObject();
+        milestoneObject.put("name", t.name);
+        res.put(milestoneObject);
+      }
+
+      return res;
+    }
+
+    static function bitbucketMeta(): JSONObject {
+      var meta := JSONObject();
+      meta.put("default_assignee", null as String);
+      meta.put("default_component", null as String);
+      meta.put("default_version", null as String);
+      meta.put("default_kind", "bug");
+      meta.put("default_milestone", null as String);
+      return meta;
+    }
   }
   
 section json 
