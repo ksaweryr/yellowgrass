@@ -327,7 +327,7 @@ section bitbucket
       issue.put("kind", bitbucketKind());
       issue.put("milestone", getRelease());
       issue.put("priority", "trivial");
-      issue.put("reporter", bitbucketUser(this.reporter.name));
+      issue.put("reporter", bitbucketUser(this.reporter.tag));
       issue.put("status", status);
       issue.put("title", this.title);
       issue.put("content", this.project.replaceLinks(this.description));
