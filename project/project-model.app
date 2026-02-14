@@ -200,8 +200,19 @@ section queries
   }
 
 section bitbucket
+  native class org.yellowgrass.utils.RegexReplacer as RegexReplacer {
+    static replaceAll(String, String, String): String
+  }
 
   extend entity Project {
+    // replaces markdown links to issues in this project with #issue_number
+    function replaceLinks(text: String): String {
+      var name := this.name;
+      // I couldn't find a way to dynamically construct regexes in WebDSL, hence this workaround
+      var pattern := "\\[([^\\]]*)\\]\\(https?:\\/\\/yellowgrass.org\\/issue\\/~name\\/(\\d+)\\)";
+      return RegexReplacer.replaceAll(text, pattern, "$1 #$2");
+    }
+
     function bitbucketExport(): File {
       var dbObject := JSONObject();
 

@@ -330,7 +330,7 @@ section bitbucket
       issue.put("reporter", bitbucketUser(this.reporter.name));
       issue.put("status", status);
       issue.put("title", this.title);
-      issue.put("content", this.description);
+      issue.put("content", this.project.replaceLinks(this.description));
       issue.put("updated_on", submitted);
       issue.put("version", null as String);
 
