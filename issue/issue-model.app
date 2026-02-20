@@ -1,5 +1,18 @@
 module issue/issue-model
 
+native class org.yellowgrass.utils.AttachmentInfo as AttachmentInfo {
+  constructor(JSONObject, String, File)
+  getMeta(): JSONObject
+  getPath(): String
+  getFile(): String
+}
+
+native class org.yellowgrass.utils.Pair as Pair {
+  constructor(Object, Object)
+  getFst(): Object
+  getSnd(): Object
+}
+
 section data model
 
   entity Issue {
@@ -16,6 +29,7 @@ section data model
     nrVotes     :: Int := [ t | t : Tag in tags where /!.*/.match(t.name)].length
     attachments -> Set<Attachment>
     comments    -> Set<Comment> := getComments()
+    votes       -> List<String> := getVotes()
      
     reporterName :: String := 
       if (reporter != null && reporter.name != null)
@@ -163,6 +177,20 @@ section queries
       return title;
     }
   }
+
+  function getVotes() : List<String> {
+    return [ t.name.substring(1) | t : Tag in tags where /!.*/.match(t.name) ];
+  }
+
+  function getRelease() : String {
+    for (t: Tag in tags) {
+      if (t.hasTag("release")) {
+        return t.name;
+      }
+    }
+
+    return null as String;
+  }
   
 
   function addComment(c : Comment) {
@@ -269,6 +297,94 @@ section queries
   }
   
 }
+
+section bitbucket
+
+  extend entity Issue {
+    function bitbucketIssue(): JSONObject {
+      var issue := JSONObject();
+      var submitted := this.submitted.format("yyyy-MM-dd'T'HH:mmZ");
+      var status: String;
+
+      if (this.open) {
+        status := "open";
+      } else {
+        status := "resolved";
+      }
+
+      var assignees := [t.name.substring(1) | t: Tag in tags where t.name.startsWith("@")];
+      var assignee  := null as JSONObject;
+
+      if (assignees.length > 0) {
+        assignee := bitbucketUser(assignees[0]);
+      }
+
+      issue.put("assignee", assignee);
+      issue.put("component", null as String);
+      issue.put("content_updated_on", null as String);
+      issue.put("created_on", submitted);
+      issue.put("id", this.number);
+      issue.put("kind", bitbucketKind());
+      issue.put("milestone", getRelease());
+      issue.put("priority", "trivial");
+      issue.put("reporter", bitbucketUser(this.reporter.tag));
+      issue.put("status", status);
+      issue.put("title", this.title);
+      issue.put("content", this.project.replaceLinks(this.description));
+      issue.put("updated_on", submitted);
+      issue.put("version", null as String);
+
+      var voters := JSONArray();
+      for (s : String in votes) {
+        voters.put(bitbucketUser(s));
+      }
+
+      issue.put("voters", voters);
+      issue.put("watchers", voters); // in YellowGrass, those are the same thing, but not in BitBucket
+      issue.put("edited_on", null as String);
+
+      return issue;
+    }
+
+    function bitbucketKind(): String {
+      if (hasTag("error")) {
+        return "bug";
+      }
+
+      if (hasTag("feature")) {
+        return "enhancement";
+      }
+
+      if (hasTag("improvement")) {
+        return "proposal";
+      }
+
+      if (hasTag("question")) {
+        return "task";
+      }
+
+      // fall back to default
+      return "enhancement";
+    }
+
+    function bitbucketComments(): List<JSONObject> {
+      return [c.bitbucketComment(this) | c : Comment in this.comments];
+    }
+
+    function bitbucketAttachments(): List<AttachmentInfo> {
+      var attachments := List<AttachmentInfo>();
+      for (f : File in [a.file | a: Attachment in this.attachments]) {
+        var a := JSONObject();
+        var path := "attachments/" + this.number + "/" + f.fileName();
+        a.put("filename", f.fileName());
+        a.put("issue", this.number);
+        a.put("path", path);
+        a.put("user", null as String);
+        attachments.add(AttachmentInfo(a, path, f));
+      }
+      return attachments;
+    }
+  }
 
 function checkNewIssueObjects(json : JSONArray) {
     for(i : Int from 0 to json.length()) {
