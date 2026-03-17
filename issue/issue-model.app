@@ -327,7 +327,13 @@ section bitbucket
       issue.put("kind", bitbucketKind());
       issue.put("milestone", getRelease());
       issue.put("priority", "trivial");
-      issue.put("reporter", bitbucketUser(this.reporter.tag));
+      var reporter := JSONObject();
+      if (this.reporter != null) {
+        reporter := bitbucketUser(this.reporter.tag);
+      } else {
+        reporter := bitbucketUser("__missing_user");
+      }
+      issue.put("reporter", reporter);
       issue.put("status", status);
       issue.put("title", this.title);
       issue.put("content", this.project.replaceLinks(this.description));

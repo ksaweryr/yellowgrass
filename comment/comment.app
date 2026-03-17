@@ -31,7 +31,13 @@ section bitbucket
 			comment.put("id", (random() * 1e9).floor());
 			comment.put("issue", issue.number);
 			comment.put("updated_on", null as String);
-			comment.put("user", bitbucketUser(issue.reporter.tag));
+			var user := JSONObject();
+			if (issue.reporter != null) {
+				user := bitbucketUser(issue.reporter.tag);
+			} else {
+				user := bitbucketUser("__missing_user");
+			}
+			comment.put("user", user);
 			return comment;
 		}
 	}
